@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	reservationKeyPrefix           = "reservation:"
-	userReservationsKeyPrefix      = "reservations:user:"
-	reservationListKeyPrefix       = "reservations:list:"
-	userReservationsCachePattern   = "reservations:user:*"
-	reservationListCachePattern    = "reservations:list:*"
+	reservationKeyPrefix         = "reservation:"
+	userReservationsKeyPrefix    = "reservations:user:"
+	reservationListKeyPrefix     = "reservations:list:"
+	userReservationsCachePattern = "reservations:user:*"
+	reservationListCachePattern  = "reservations:list:*"
 )
 
 // ReservationCache implements cache.ReservationCacheQ interface using Redis
@@ -128,4 +128,3 @@ func (c *ReservationCache) InvalidateUserReservations(ctx context.Context, userI
 	key := userReservationsKeyPrefix + userID.String()
 	return c.client.Del(ctx, key).Err()
 }
-
