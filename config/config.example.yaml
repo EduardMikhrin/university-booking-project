@@ -1,0 +1,11 @@
+log:
+  level: debug
+  disable_sentry: true
+
+db:
+  url: postgres://example:example@example-1-example:0000/example?sslmode=true
+
+cache:
+  url: redis://:password@127.0.0.1:6379/0
+  password: ""
+  db: 0
