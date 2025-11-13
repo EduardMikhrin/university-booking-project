@@ -4,13 +4,19 @@ go 1.24.5
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.5.1
+	github.com/rubenv/sql-migrate v1.8.0
+	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.11.1
 	gitlab.com/distributed_lab/figure v2.1.2+incompatible
 	gitlab.com/distributed_lab/kit v1.11.4
+	gitlab.com/distributed_lab/logan v3.8.1+incompatible
+	golang.org/x/crypto v0.37.0
+	golang.org/x/sync v0.13.0
 )
 
 require (
@@ -25,10 +31,12 @@ require (
 	github.com/ethereum/go-ethereum v1.10.25 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
+	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
@@ -49,14 +57,12 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	gitlab.com/distributed_lab/figure/v3 v3.1.4 // indirect
-	gitlab.com/distributed_lab/logan v3.8.1+incompatible // indirect
 	gitlab.com/distributed_lab/running v1.6.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

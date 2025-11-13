@@ -10,6 +10,9 @@ import (
 type Config interface {
 	comfig.Logger
 	pgdb.Databaser
+	Listenerer
+	cacher.Cacher
+	JWTer
 }
 
 type config struct {
@@ -18,13 +21,17 @@ type config struct {
 	comfig.Logger
 	pgdb.Databaser
 	cacher.Cacher
+	Listenerer
+	JWTer
 }
 
 func New(getter kv.Getter) Config {
 	return &config{
-		getter:    getter,
-		Logger:    comfig.NewLogger(getter, comfig.LoggerOpts{}),
-		Databaser: pgdb.NewDatabaser(getter),
-		Cacher:    cacher.NewCacher(getter),
+		getter:     getter,
+		Logger:     comfig.NewLogger(getter, comfig.LoggerOpts{}),
+		Databaser:  pgdb.NewDatabaser(getter),
+		Cacher:     cacher.NewCacher(getter),
+		Listenerer: NewListenerer(getter),
+		JWTer:      NewJWTer(getter),
 	}
 }
