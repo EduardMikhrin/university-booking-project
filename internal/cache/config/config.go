@@ -49,7 +49,7 @@ func (c *cacher) Config() *config {
 	return c.once.Do(func() interface{} {
 		var cfg config
 		if err := figure.Out(&cfg).From(kv.MustGetStringMap(c.getter, cacheConfigKey)).Please(); err != nil {
-			panic(errors.Wrap(err, "failed to figure out core observer config"))
+			panic(errors.Wrap(err, "failed to figure out cache config"))
 		}
 		return &cfg
 	}).(*config)
