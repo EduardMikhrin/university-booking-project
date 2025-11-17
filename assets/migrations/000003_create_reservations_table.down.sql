@@ -1,3 +1,5 @@
+-- +migrate Down
+
 -- Drop reservations table and indexes
 DROP INDEX IF EXISTS idx_reservations_guest_name;
 DROP INDEX IF EXISTS idx_reservations_guest_phone;

@@ -1,3 +1,5 @@
+-- +migrate Down
+
 -- Drop triggers
 DROP TRIGGER IF EXISTS update_reservations_updated_at ON reservations;
 DROP TRIGGER IF EXISTS update_tables_updated_at ON tables;

@@ -49,11 +49,11 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     ports:
-      - "8080:8080"
+      - "8081:8080"
     networks:
       - booking-network
     restart: unless-stopped
-    command: ["./booking-svc", "service", "run", "--config", "/app/config.yaml"]
+    entrypoint: sh -c "./booking-svc service migrate up && ./booking-svc service run"
 
 volumes:
   postgres_data:

@@ -1,3 +1,5 @@
+-- +migrate Up
+
 -- Create tables table
 CREATE TABLE IF NOT EXISTS tables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

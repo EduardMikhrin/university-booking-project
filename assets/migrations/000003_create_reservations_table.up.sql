@@ -1,3 +1,5 @@
+-- +migrate Up
+
 -- Create reservations table
 CREATE TABLE IF NOT EXISTS reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

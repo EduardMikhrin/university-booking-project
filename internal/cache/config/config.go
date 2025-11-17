@@ -28,9 +28,9 @@ type cacher struct {
 }
 
 type config struct {
-	URL      string `fig:"url, required"`
-	Password string `fig:"password, required"`
-	DB       int    `fig:"db, required"`
+	URL      string `fig:"url,required"`
+	Password string `fig:"password,required"`
+	DB       int    `fig:"db,required"`
 }
 
 func (c *cacher) Cache() cache.CacheQ {
