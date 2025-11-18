@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: booking-postgres
+    environment:
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: booking_password
+      POSTGRES_DB: booking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: booking-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+  booking-svc:
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    container_name: booking-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    ports:
+      - "8081:8080"
+    networks:
+      - booking-network
+    restart: unless-stopped
+    entrypoint: sh -c "./booking-svc service migrate up && ./booking-svc service run"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  booking-network:
+    driver: bridge
+

@@ -28,9 +28,9 @@ type cacher struct {
 }
 
 type config struct {
-	URL      string `fig:"url, required"`
-	Password string `fig:"password, required"`
-	DB       int    `fig:"db, required"`
+	URL      string `fig:"url,required"`
+	Password string `fig:"password,required"`
+	DB       int    `fig:"db,required"`
 }
 
 func (c *cacher) Cache() cache.CacheQ {
@@ -49,7 +49,7 @@ func (c *cacher) Config() *config {
 	return c.once.Do(func() interface{} {
 		var cfg config
 		if err := figure.Out(&cfg).From(kv.MustGetStringMap(c.getter, cacheConfigKey)).Please(); err != nil {
-			panic(errors.Wrap(err, "failed to figure out core observer config"))
+			panic(errors.Wrap(err, "failed to figure out cache config"))
 		}
 		return &cfg
 	}).(*config)

@@ -1,3 +1,5 @@
+-- +migrate Down
+    
 -- Drop tables table and indexes
 DROP INDEX IF EXISTS idx_tables_capacity;
 DROP INDEX IF EXISTS idx_tables_location;

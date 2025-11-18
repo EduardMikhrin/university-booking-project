@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+booking-svc
+
+# Test files
+*_test.go
+**/*_test.go
+
+# Documentation
+*.md
+docs/
+API_ENDPOINTS.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
+
+# Build folder
+build/
+
+# Config (will be mounted as volume)
+config/*.yaml
+!config/config.example.yaml
+
+

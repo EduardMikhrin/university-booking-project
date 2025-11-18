@@ -59,7 +59,7 @@ func (q *UserQ) GetByID(ctx context.Context, id uuid.UUID) (*types.User, error) 
 	err := q.db.GetContext(ctx, &user, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("user not found")
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -85,8 +85,9 @@ func (q *UserQ) GetByEmail(ctx context.Context, email string) (*types.User, erro
 	err := q.db.GetContext(ctx, &user, query, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("user not found")
+			return nil, nil
 		}
+
 		return nil, err
 	}
 

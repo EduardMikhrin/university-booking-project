@@ -74,7 +74,7 @@ func (s *Server) mountRoutes() {
 // Run starts the HTTP server and blocks until an error occurs
 func (s *Server) Run(ctx context.Context) error {
 	server := &http.Server{
-		Handler: s.router,
+		Handler: corsMiddleware(s.router),
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
 		},

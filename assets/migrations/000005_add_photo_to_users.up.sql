@@ -1,3 +1,5 @@
+-- +migrate Up
+
 -- Add photo column to users table with default value
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS photo VARCHAR(500) DEFAULT 'https://cdn-icons-png.flaticon.com/512/709/709699.png';
