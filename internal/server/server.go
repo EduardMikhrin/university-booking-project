@@ -70,8 +70,7 @@ func (s *Server) mountRoutes() {
 
 	// Mount API v1 under /api/v1
 	s.router.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1))
-	s.router.Handle("/swagger/", httpSwagger.WrapHandler)
-
+	s.router.Handle("/swagger/", http.StripPrefix("/swagger/", httpSwagger.WrapHandler))
 }
 
 // Run starts the HTTP server and blocks until an error occurs
