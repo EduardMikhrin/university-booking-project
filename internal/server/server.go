@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	_ "github.com/EduardMikhrin/university-booking-project/docs"
 	"github.com/EduardMikhrin/university-booking-project/internal/cache"
 	"github.com/EduardMikhrin/university-booking-project/internal/data"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -70,7 +71,7 @@ func (s *Server) mountRoutes() {
 
 	// Mount API v1 under /api/v1
 	s.router.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1))
-	s.router.Handle("/swagger/", http.StripPrefix("/swagger/", httpSwagger.WrapHandler))
+	s.router.Handle("/swagger/", httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json")))
 }
 
 // Run starts the HTTP server and blocks until an error occurs
