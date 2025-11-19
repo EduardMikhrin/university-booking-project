@@ -10,12 +10,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// UpdateTableAvailabilityRequest represents the request body for updating table availability
 type UpdateTableAvailabilityRequest struct {
 	IsAvailable bool `json:"isAvailable"`
 }
 
-// handleGetTables handles GET /tables
+// @Summary Get all tables
+// @Description Get list of all tables
+// @Tags Tables
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} types.Table
+// @Failure 500 {object} ErrorResponse
+// @Router /tables [get]
 func (s *Server) handleGetTables(w http.ResponseWriter, r *http.Request) {
 	tables, err := s.db.TableQ().GetAll(r.Context())
 	if err != nil {
@@ -23,11 +29,20 @@ func (s *Server) handleGetTables(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, http.StatusInternalServerError, "Internal server error", nil)
 		return
 	}
-
 	writeJSONResponse(w, http.StatusOK, tables)
 }
 
-// handleGetTable handles GET /tables/{id}
+// @Summary Get table by ID
+// @Description Get a specific table by ID
+// @Tags Tables
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Table ID"
+// @Success 200 {object} types.Table
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /tables/{id} [get]
 func (s *Server) handleGetTable(w http.ResponseWriter, r *http.Request) {
 	tableIDStr := r.PathValue("id")
 	tableID, err := uuid.Parse(tableIDStr)
@@ -52,11 +67,20 @@ func (s *Server) handleGetTable(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, http.StatusOK, table)
 }
 
-// handleGetAvailableTables handles GET /tables/available
+// @Summary Get available tables
+// @Description Get tables available for specified date/time/guests
+// @Tags Tables
+// @Security BearerAuth
+// @Produce json
+// @Param date query string false "Date (YYYY-MM-DD)"
+// @Param time query string false "Time (HH:mm)"
+// @Param guests query int false "Number of guests"
+// @Success 200 {array} types.Table
+// @Failure 500 {object} ErrorResponse
+// @Router /tables/available [get]
 func (s *Server) handleGetAvailableTables(w http.ResponseWriter, r *http.Request) {
 	filters := &types.TableAvailabilityFilters{}
 
-	// Parse query parameters
 	if dateStr := r.URL.Query().Get("date"); dateStr != "" {
 		if date, err := time.Parse("2006-01-02", dateStr); err == nil {
 			filters.Date = &date
@@ -66,8 +90,6 @@ func (s *Server) handleGetAvailableTables(w http.ResponseWriter, r *http.Request
 		filters.Time = &timeStr
 	}
 	if guestsStr := r.URL.Query().Get("guests"); guestsStr != "" {
-		// Parse guests as integer
-		// Note: This is a simplified parsing, you might want to add proper error handling
 		var guests int
 		if _, err := fmt.Sscanf(guestsStr, "%d", &guests); err == nil {
 			filters.Guests = &guests
@@ -84,7 +106,19 @@ func (s *Server) handleGetAvailableTables(w http.ResponseWriter, r *http.Request
 	writeJSONResponse(w, http.StatusOK, tables)
 }
 
-// handleUpdateTableAvailability handles PATCH /tables/{id}/availability
+// @Summary Update table availability
+// @Description Update availability for a specific table
+// @Tags Tables
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Table ID"
+// @Param body body UpdateTableAvailabilityRequest true "Availability payload"
+// @Success 200 {object} types.Table
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /tables/{id}/availability [patch]
 func (s *Server) handleUpdateTableAvailability(w http.ResponseWriter, r *http.Request) {
 	tableIDStr := r.PathValue("id")
 	tableID, err := uuid.Parse(tableIDStr)
@@ -94,7 +128,6 @@ func (s *Server) handleUpdateTableAvailability(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Get existing table
 	table, err := s.db.TableQ().GetByID(r.Context(), tableID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get table")
@@ -114,14 +147,12 @@ func (s *Server) handleUpdateTableAvailability(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Update availability
 	if err := s.db.TableQ().UpdateAvailability(r.Context(), tableID, req.IsAvailable); err != nil {
 		s.log.WithError(err).Error("failed to update table availability")
 		writeErrorResponse(w, http.StatusInternalServerError, "Internal server error", nil)
 		return
 	}
 
-	// Get updated table
 	table, err = s.db.TableQ().GetByID(r.Context(), tableID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get updated table")
@@ -129,11 +160,9 @@ func (s *Server) handleUpdateTableAvailability(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Invalidate table cache
 	if err := s.cache.TableCache().InvalidateTableCache(r.Context()); err != nil {
 		s.log.WithError(err).Warn("failed to invalidate table cache")
 	}
 
 	writeJSONResponse(w, http.StatusOK, table)
 }
-

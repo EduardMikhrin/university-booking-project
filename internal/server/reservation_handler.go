@@ -10,41 +10,47 @@ import (
 	"github.com/google/uuid"
 )
 
-// CreateReservationRequest represents the request body for creating a reservation
 type CreateReservationRequest struct {
 	GuestName       string  `json:"guestName"`
 	GuestPhone      string  `json:"guestPhone"`
 	GuestEmail      string  `json:"guestEmail"`
-	Date            string  `json:"date"` // YYYY-MM-DD
-	Time            string  `json:"time"` // HH:mm
+	Date            string  `json:"date"`
+	Time            string  `json:"time"`
 	Guests          int     `json:"guests"`
 	TableNumber     string  `json:"tableNumber"`
 	SpecialRequests *string `json:"specialRequests,omitempty"`
 }
 
-// UpdateReservationRequest represents the request body for updating a reservation
 type UpdateReservationRequest struct {
 	GuestName       *string `json:"guestName,omitempty"`
 	GuestPhone      *string `json:"guestPhone,omitempty"`
 	GuestEmail      *string `json:"guestEmail,omitempty"`
-	Date            *string `json:"date,omitempty"` // YYYY-MM-DD
-	Time            *string `json:"time,omitempty"` // HH:mm
+	Date            *string `json:"date,omitempty"`
+	Time            *string `json:"time,omitempty"`
 	Guests          *int    `json:"guests,omitempty"`
 	TableNumber     *string `json:"tableNumber,omitempty"`
 	SpecialRequests *string `json:"specialRequests,omitempty"`
 }
 
-// UpdateReservationStatusRequest represents the request body for updating reservation status
 type UpdateReservationStatusRequest struct {
 	Status string `json:"status"`
 }
 
-// DeleteResponse represents the response for delete operations
 type DeleteResponse struct {
 	Message string `json:"message"`
 }
 
-// handleGetReservations handles GET /reservations
+// @Summary Get reservations
+// @Description Get reservations for current user (admin – all reservations)
+// @Tags Reservations
+// @Security BearerAuth
+// @Produce json
+// @Param status query string false "Filter by status"
+// @Param date query string false "Filter by date (YYYY-MM-DD)"
+// @Param search query string false "Search"
+// @Success 200 {array} types.Reservation
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations [get]
 func (s *Server) handleGetReservations(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -53,7 +59,6 @@ func (s *Server) handleGetReservations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse query parameters
 	filters := &types.ReservationFilters{}
 	if status := r.URL.Query().Get("status"); status != "" {
 		filters.Status = &status
@@ -67,7 +72,6 @@ func (s *Server) handleGetReservations(w http.ResponseWriter, r *http.Request) {
 		filters.Search = &search
 	}
 
-	// Admin sees all reservations, users see only their own
 	var userID *uuid.UUID
 	if user.Role != adminRole {
 		userID = &user.ID
@@ -83,7 +87,18 @@ func (s *Server) handleGetReservations(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, http.StatusOK, reservations)
 }
 
-// handleGetReservation handles GET /reservations/{id}
+// @Summary Get reservation by ID
+// @Description Get single reservation (only owner or admin)
+// @Tags Reservations
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Reservation ID"
+// @Success 200 {object} types.Reservation
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations/{id} [get]
 func (s *Server) handleGetReservation(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -112,7 +127,6 @@ func (s *Server) handleGetReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check authorization: users can only view their own reservations unless admin
 	if user.Role != adminRole && reservation.UserID != user.ID {
 		writeErrorResponse(w, http.StatusForbidden, "Forbidden", nil)
 		return
@@ -121,7 +135,17 @@ func (s *Server) handleGetReservation(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, http.StatusOK, reservation)
 }
 
-// handleGetUserReservations handles GET /reservations/user/{userId}
+// @Summary Get reservations by user
+// @Description Admin may fetch any user; user may fetch only their own
+// @Tags Reservations
+// @Security BearerAuth
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {array} types.Reservation
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations/user/{userId} [get]
 func (s *Server) handleGetUserReservations(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -138,7 +162,6 @@ func (s *Server) handleGetUserReservations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Check authorization: users can only view their own reservations unless admin
 	if user.Role != adminRole && userID != user.ID {
 		writeErrorResponse(w, http.StatusForbidden, "Forbidden", nil)
 		return
@@ -154,7 +177,17 @@ func (s *Server) handleGetUserReservations(w http.ResponseWriter, r *http.Reques
 	writeJSONResponse(w, http.StatusOK, reservations)
 }
 
-// handleCreateReservation handles POST /reservations
+// @Summary Create reservation
+// @Description Create reservation for authenticated user
+// @Tags Reservations
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param reservation body CreateReservationRequest true "Reservation payload"
+// @Success 201 {object} types.Reservation
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations [post]
 func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -170,7 +203,6 @@ func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Validate input
 	validationErrors := make(map[string]string)
 	req.GuestName = strings.TrimSpace(req.GuestName)
 	req.GuestPhone = strings.TrimSpace(req.GuestPhone)
@@ -191,12 +223,12 @@ func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request)
 	if req.Date == "" {
 		validationErrors["date"] = "Date is required"
 	} else if _, err := time.Parse("2006-01-02", req.Date); err != nil {
-		validationErrors["date"] = "Invalid date format (expected YYYY-MM-DD)"
+		validationErrors["date"] = "Invalid date format"
 	}
 	if req.Time == "" {
 		validationErrors["time"] = "Time is required"
 	} else if _, err := time.Parse("15:04", req.Time); err != nil {
-		validationErrors["time"] = "Invalid time format (expected HH:mm)"
+		validationErrors["time"] = "Invalid time format"
 	}
 	if req.Guests <= 0 {
 		validationErrors["guests"] = "Number of guests must be greater than 0"
@@ -210,10 +242,8 @@ func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Parse date
 	date, _ := time.Parse("2006-01-02", req.Date)
 
-	// Check table availability
 	available, err := s.db.ReservationQ().CheckTableAvailability(r.Context(), req.TableNumber, req.Date, req.Time)
 	if err != nil {
 		s.log.WithError(err).Error("failed to check table availability")
@@ -227,7 +257,6 @@ func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Create reservation
 	reservation := &types.Reservation{
 		ID:              uuid.New(),
 		UserID:          user.ID,
@@ -250,7 +279,6 @@ func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Invalidate reservation cache
 	if err := s.cache.ReservationCache().InvalidateUserReservations(r.Context(), user.ID); err != nil {
 		s.log.WithError(err).Warn("failed to invalidate reservation cache")
 	}
@@ -258,7 +286,20 @@ func (s *Server) handleCreateReservation(w http.ResponseWriter, r *http.Request)
 	writeJSONResponse(w, http.StatusCreated, reservation)
 }
 
-// handleUpdateReservation handles PATCH /reservations/{id}
+// @Summary Update reservation
+// @Description Update reservation fields (owner or admin)
+// @Tags Reservations
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Reservation ID"
+// @Param body body UpdateReservationRequest true "Payload"
+// @Success 200 {object} types.Reservation
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations/{id} [patch]
 func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -275,7 +316,6 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get existing reservation
 	reservation, err := s.db.ReservationQ().GetByID(r.Context(), reservationID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get reservation")
@@ -288,7 +328,6 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Check authorization: users can only update their own reservations unless admin
 	if user.Role != adminRole && reservation.UserID != user.ID {
 		writeErrorResponse(w, http.StatusForbidden, "Forbidden", nil)
 		return
@@ -301,7 +340,6 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Update fields
 	hasUpdates := false
 	validationErrors := make(map[string]string)
 
@@ -332,7 +370,7 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 	if req.Date != nil {
 		date, err := time.Parse("2006-01-02", *req.Date)
 		if err != nil {
-			validationErrors["date"] = "Invalid date format (expected YYYY-MM-DD)"
+			validationErrors["date"] = "Invalid date format"
 		} else {
 			reservation.Date = date
 			hasUpdates = true
@@ -340,7 +378,7 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 	}
 	if req.Time != nil {
 		if _, err := time.Parse("15:04", *req.Time); err != nil {
-			validationErrors["time"] = "Invalid time format (expected HH:mm)"
+			validationErrors["time"] = "Invalid time format"
 		} else {
 			reservation.Time = *req.Time
 			hasUpdates = true
@@ -381,7 +419,6 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Invalidate reservation cache
 	if err := s.cache.ReservationCache().DeleteReservation(r.Context(), reservationID); err != nil {
 		s.log.WithError(err).Warn("failed to invalidate reservation cache")
 	}
@@ -392,10 +429,20 @@ func (s *Server) handleUpdateReservation(w http.ResponseWriter, r *http.Request)
 	writeJSONResponse(w, http.StatusOK, reservation)
 }
 
-// handleUpdateReservationStatus handles PATCH /reservations/{id}/status
+// @Summary Update reservation status
+// @Description Update reservation status (pending, confirmed, cancelled, completed)
+// @Tags Reservations
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Reservation ID"
+// @Param body body UpdateReservationStatusRequest true "Status payload"
+// @Success 200 {object} types.Reservation
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations/{id}/status [patch]
 func (s *Server) handleUpdateReservationStatus(w http.ResponseWriter, r *http.Request) {
-	// User is already authenticated via middleware
-
 	reservationIDStr := r.PathValue("id")
 	reservationID, err := uuid.Parse(reservationIDStr)
 	if err != nil {
@@ -404,7 +451,6 @@ func (s *Server) handleUpdateReservationStatus(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Get existing reservation
 	reservation, err := s.db.ReservationQ().GetByID(r.Context(), reservationID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get reservation")
@@ -424,7 +470,6 @@ func (s *Server) handleUpdateReservationStatus(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Validate status
 	validStatuses := map[string]bool{
 		"pending":   true,
 		"confirmed": true,
@@ -433,19 +478,17 @@ func (s *Server) handleUpdateReservationStatus(w http.ResponseWriter, r *http.Re
 	}
 	if !validStatuses[req.Status] {
 		writeErrorResponse(w, http.StatusBadRequest, "Validation error", map[string]string{
-			"status": "Invalid status. Must be one of: pending, confirmed, cancelled, completed",
+			"status": "Invalid status",
 		})
 		return
 	}
 
-	// Update status
 	if err := s.db.ReservationQ().UpdateStatus(r.Context(), reservationID, req.Status); err != nil {
 		s.log.WithError(err).Error("failed to update reservation status")
 		writeErrorResponse(w, http.StatusInternalServerError, "Internal server error", nil)
 		return
 	}
 
-	// Get updated reservation
 	reservation, err = s.db.ReservationQ().GetByID(r.Context(), reservationID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get updated reservation")
@@ -453,7 +496,6 @@ func (s *Server) handleUpdateReservationStatus(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Invalidate reservation cache
 	if err := s.cache.ReservationCache().DeleteReservation(r.Context(), reservationID); err != nil {
 		s.log.WithError(err).Warn("failed to invalidate reservation cache")
 	}
@@ -464,7 +506,18 @@ func (s *Server) handleUpdateReservationStatus(w http.ResponseWriter, r *http.Re
 	writeJSONResponse(w, http.StatusOK, reservation)
 }
 
-// handleDeleteReservation handles DELETE /reservations/{id}
+// @Summary Delete reservation
+// @Description Delete reservation (owner or admin)
+// @Tags Reservations
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Reservation ID"
+// @Success 200 {object} DeleteResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /reservations/{id} [delete]
 func (s *Server) handleDeleteReservation(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -481,7 +534,6 @@ func (s *Server) handleDeleteReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get existing reservation to check authorization
 	reservation, err := s.db.ReservationQ().GetByID(r.Context(), reservationID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get reservation")
@@ -494,20 +546,17 @@ func (s *Server) handleDeleteReservation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Check authorization: users can only delete their own reservations unless admin
 	if user.Role != adminRole && reservation.UserID != user.ID {
 		writeErrorResponse(w, http.StatusForbidden, "Forbidden", nil)
 		return
 	}
 
-	// Delete reservation
 	if err := s.db.ReservationQ().Delete(r.Context(), reservationID); err != nil {
 		s.log.WithError(err).Error("failed to delete reservation")
 		writeErrorResponse(w, http.StatusInternalServerError, "Internal server error", nil)
 		return
 	}
 
-	// Invalidate reservation cache
 	if err := s.cache.ReservationCache().DeleteReservation(r.Context(), reservationID); err != nil {
 		s.log.WithError(err).Warn("failed to invalidate reservation cache")
 	}
@@ -515,9 +564,7 @@ func (s *Server) handleDeleteReservation(w http.ResponseWriter, r *http.Request)
 		s.log.WithError(err).Warn("failed to invalidate user reservations cache")
 	}
 
-	response := DeleteResponse{
+	writeJSONResponse(w, http.StatusOK, DeleteResponse{
 		Message: "Reservation deleted successfully",
-	}
-	writeJSONResponse(w, http.StatusOK, response)
+	})
 }
-

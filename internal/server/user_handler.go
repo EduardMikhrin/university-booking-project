@@ -9,16 +9,25 @@ import (
 	"gitlab.com/distributed_lab/logan/v3"
 )
 
-// UpdateUserRequest represents the request body for updating a user
 type UpdateUserRequest struct {
 	Name  *string `json:"name,omitempty"`
 	Phone *string `json:"phone,omitempty"`
 	Email *string `json:"email,omitempty"`
 }
 
-// handleGetUser handles GET /users/{id}
+// @Summary Get user by ID
+// @Description Get user profile by ID (only self or admin)
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} types.User
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /users/{id} [get]
 func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path parameter
 	userIDStr := r.PathValue("id")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -27,7 +36,6 @@ func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get authenticated user from context
 	authenticatedUser, err := GetUserFromContext(r)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get authenticated user")
@@ -35,7 +43,6 @@ func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check authorization: users can only view their own profile unless they are admin
 	if authenticatedUser.ID != userID && authenticatedUser.Role != adminRole {
 		s.log.WithFields(logan.F{
 			"authenticated_user_id": authenticatedUser.ID,
@@ -45,7 +52,6 @@ func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from database
 	user, err := s.db.UserQ().GetByID(r.Context(), userID)
 	if err != nil {
 		s.log.WithError(err).WithField("user_id", userID).Error("failed to get user from database")
@@ -59,13 +65,24 @@ func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return user (password is already excluded via json:"-" tag)
 	writeJSONResponse(w, http.StatusOK, user)
 }
 
-// handleUpdateUser handles PATCH /users/{id}
+// @Summary Update user
+// @Description Update user profile (only self or admin)
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param body body UpdateUserRequest true "User update payload"
+// @Success 200 {object} types.User
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /users/{id} [patch]
 func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path parameter
 	userIDStr := r.PathValue("id")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -74,7 +91,6 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get authenticated user from context
 	authenticatedUser, err := GetUserFromContext(r)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get authenticated user")
@@ -82,7 +98,6 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check authorization: users can only update their own profile unless they are admin
 	if authenticatedUser.ID != userID && authenticatedUser.Role != adminRole {
 		s.log.WithFields(logan.F{
 			"authenticated_user_id": authenticatedUser.ID,
@@ -92,7 +107,6 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing user
 	user, err := s.db.UserQ().GetByID(r.Context(), userID)
 	if err != nil {
 		s.log.WithError(err).WithField("user_id", userID).Error("failed to get user from database")
@@ -106,7 +120,6 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse request body
 	var updateReq UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&updateReq); err != nil {
 		s.log.WithError(err).Debug("failed to decode request body")
@@ -114,11 +127,9 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate and update fields
 	validationErrors := make(map[string]string)
 	hasUpdates := false
 
-	// Update name if provided
 	if updateReq.Name != nil {
 		name := strings.TrimSpace(*updateReq.Name)
 		if name == "" {
@@ -129,14 +140,12 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Update phone if provided
 	if updateReq.Phone != nil {
 		phone := strings.TrimSpace(*updateReq.Phone)
 		user.Phone = &phone
 		hasUpdates = true
 	}
 
-	// Update email if provided
 	if updateReq.Email != nil {
 		email := strings.TrimSpace(*updateReq.Email)
 		if email == "" {
@@ -144,7 +153,6 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		} else if !isValidEmail(email) {
 			validationErrors["email"] = "Invalid email format"
 		} else if email != user.Email {
-			// Check if email already exists
 			existingUser, err := s.db.UserQ().GetByEmail(r.Context(), email)
 			if err != nil {
 				s.log.WithError(err).Error("failed to check email existence")
@@ -160,32 +168,25 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Return validation errors if any
 	if len(validationErrors) > 0 {
 		writeErrorResponse(w, http.StatusBadRequest, "Validation error", validationErrors)
 		return
 	}
 
-	// Check if there are any updates
 	if !hasUpdates {
-		// No updates provided, return current user
 		writeJSONResponse(w, http.StatusOK, user)
 		return
 	}
 
-	// Update user in database
 	if err := s.db.UserQ().Update(r.Context(), userID, user); err != nil {
 		s.log.WithError(err).WithField("user_id", userID).Error("failed to update user")
 		writeErrorResponse(w, http.StatusInternalServerError, "Internal server error", nil)
 		return
 	}
 
-	// Invalidate user cache
 	if err := s.cache.UserCache().DeleteUser(r.Context(), userID); err != nil {
 		s.log.WithError(err).WithField("user_id", userID).Warn("failed to invalidate user cache")
 	}
-	// Note: Email cache will expire naturally, or we could add DeleteUserByEmail to cache interface if needed
 
-	// Return updated user
 	writeJSONResponse(w, http.StatusOK, user)
 }

@@ -13,12 +13,14 @@ import (
 )
 
 // LoginRequest represents the request body for login
+// @Description Login request body
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 // RegisterRequest represents the request body for registration
+// @Description Registration request body
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -38,6 +40,17 @@ type LogoutResponse struct {
 }
 
 // handleLogin handles POST /auth/login
+// @Summary User login
+// @Description Authenticate user and return JWT token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login request"
+// @Success 200 {object} AuthResponse
+// @Failure 400 {object} ErrorResponse "Invalid request"
+// @Failure 401 {object} ErrorResponse "Invalid email or password"
+// @Failure 500 {object} ErrorResponse "Server error"
+// @Router /auth/login [post]
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -46,14 +59,12 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate input
 	req.Email = strings.TrimSpace(req.Email)
 	if req.Email == "" || req.Password == "" {
 		writeErrorResponse(w, http.StatusBadRequest, "Email and password are required", nil)
 		return
 	}
 
-	// Get user by email
 	user, err := s.db.UserQ().GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get user by email")
@@ -62,18 +73,15 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user == nil {
-		// Don't reveal if email exists or not for security
 		writeErrorResponse(w, http.StatusUnauthorized, "Invalid email or password", nil)
 		return
 	}
 
-	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		writeErrorResponse(w, http.StatusUnauthorized, "Invalid email or password", nil)
 		return
 	}
 
-	// Generate JWT token
 	token, err := s.generateToken(user.ID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to generate token")
@@ -81,12 +89,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store token in cache
 	if err := s.cache.TokenCache().SetToken(r.Context(), token, user.ID, s.jwtConfig.AccessTokenLifetime); err != nil {
 		s.log.WithError(err).Warn("failed to cache token")
 	}
 
-	// Return response
 	response := AuthResponse{
 		User:  user,
 		Token: token,
@@ -95,6 +101,16 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleRegister handles POST /auth/register
+// @Summary User registration
+// @Description Create a new user and return JWT token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Register request"
+// @Success 201 {object} AuthResponse
+// @Failure 400 {object} ErrorResponse "Validation error"
+// @Failure 500 {object} ErrorResponse "Server error"
+// @Router /auth/register [post]
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -103,7 +119,6 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate input
 	validationErrors := make(map[string]string)
 	req.Email = strings.TrimSpace(req.Email)
 	req.Name = strings.TrimSpace(req.Name)
@@ -130,7 +145,6 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if email already exists
 	existingUser, err := s.db.UserQ().GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		s.log.WithError(err).Error("failed to check email existence")
@@ -144,7 +158,6 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		s.log.WithError(err).Error("failed to hash password")
@@ -152,14 +165,13 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create user
 	user := &types.User{
 		ID:        uuid.New(),
 		Email:     req.Email,
 		Password:  string(hashedPassword),
 		Name:      req.Name,
 		Phone:     &req.Phone,
-		Role:      "user", // Default role
+		Role:      "user",
 		CreatedAt: time.Now(),
 	}
 
@@ -169,7 +181,6 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT token
 	token, err := s.generateToken(user.ID)
 	if err != nil {
 		s.log.WithError(err).Error("failed to generate token")
@@ -177,12 +188,10 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store token in cache
 	if err := s.cache.TokenCache().SetToken(r.Context(), token, user.ID, s.jwtConfig.AccessTokenLifetime); err != nil {
 		s.log.WithError(err).Warn("failed to cache token")
 	}
 
-	// Return response
 	response := AuthResponse{
 		User:  user,
 		Token: token,
@@ -191,6 +200,13 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetMe handles GET /auth/me
+// @Summary Get current user
+// @Description Get authenticated user from JWT token
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} types.User
+// @Failure 500 {object} ErrorResponse "Server error"
+// @Router /auth/me [get]
 func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromContext(r)
 	if err != nil {
@@ -203,8 +219,16 @@ func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleLogout handles POST /auth/logout
+// @Summary Logout user
+// @Description Invalidate JWT token and remove from cache
+// @Tags Auth
+// @Produce json
+// @Param Authorization header string true "Bearer {token}"
+// @Success 200 {object} LogoutResponse
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 500 {object} ErrorResponse "Server error"
+// @Router /auth/logout [post]
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	// Extract token from Authorization header
 	token, err := extractToken(r)
 	if err != nil {
 		s.log.WithError(err).Debug("failed to extract token")
@@ -212,7 +236,6 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from context
 	user, err := GetUserFromContext(r)
 	if err != nil {
 		s.log.WithError(err).Error("failed to get user from context")
@@ -220,12 +243,10 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete token from cache
 	if err := s.cache.TokenCache().DeleteToken(r.Context(), token); err != nil {
 		s.log.WithError(err).WithField("user_id", user.ID).Warn("failed to delete token from cache")
 	}
 
-	// Add token to blacklist
 	if err := s.cache.TokenCache().SetTokenBlacklist(r.Context(), token, s.jwtConfig.AccessTokenLifetime); err != nil {
 		s.log.WithError(err).WithField("user_id", user.ID).Warn("failed to blacklist token")
 	}
@@ -236,7 +257,6 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, http.StatusOK, response)
 }
 
-// generateToken generates a JWT token for the user
 func (s *Server) generateToken(userID uuid.UUID) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{

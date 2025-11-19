@@ -5,6 +5,13 @@ import (
 )
 
 // handleGetMonthlyReports handles GET /reports/monthly
+// @Summary Get monthly statistics list
+// @Description Returns aggregated statistics for all months
+// @Tags Reports
+// @Produce json
+// @Success 200 {array} types.MonthlyStats
+// @Failure 500 {object} ErrorResponse "Server error"
+// @Router /reports/monthly [get]
 func (s *Server) handleGetMonthlyReports(w http.ResponseWriter, r *http.Request) {
 	stats, err := s.db.ReportsQ().GetMonthlyStatsList(r.Context())
 	if err != nil {
@@ -17,10 +24,19 @@ func (s *Server) handleGetMonthlyReports(w http.ResponseWriter, r *http.Request)
 }
 
 // handleGetMonthlyReport handles GET /reports/monthly/{month}
+// @Summary Get detailed monthly report
+// @Description Returns detailed statistics for a specific month (YYYY-MM)
+// @Tags Reports
+// @Produce json
+// @Param month path string true "Month in format YYYY-MM"
+// @Success 200 {object} types.DetailedMonthlyStats
+// @Failure 400 {object} ErrorResponse "Invalid month format"
+// @Failure 404 {object} ErrorResponse "Statistics not found"
+// @Failure 500 {object} ErrorResponse "Server error"
+// @Router /reports/monthly/{month} [get]
 func (s *Server) handleGetMonthlyReport(w http.ResponseWriter, r *http.Request) {
 	month := r.PathValue("month")
 
-	// Validate month format (YYYY-MM)
 	if len(month) != 7 || month[4] != '-' {
 		writeErrorResponse(w, http.StatusBadRequest, "Invalid month format (expected YYYY-MM)", nil)
 		return
@@ -40,4 +56,3 @@ func (s *Server) handleGetMonthlyReport(w http.ResponseWriter, r *http.Request) 
 
 	writeJSONResponse(w, http.StatusOK, stats)
 }
-

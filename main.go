@@ -1,3 +1,10 @@
+// @title University Booking API
+// @version 1.0
+// @description Backend API for university booking system
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @BasePath /internal/server
 package main
 
 import (
