@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/EduardMikhrin/university-booking-project/docs"
 	_ "github.com/EduardMikhrin/university-booking-project/docs"
 	"github.com/EduardMikhrin/university-booking-project/internal/cache"
 	"github.com/EduardMikhrin/university-booking-project/internal/data"
@@ -19,6 +20,10 @@ type Server struct {
 	listener  net.Listener
 	jwtConfig JWT
 	router    *http.ServeMux
+}
+
+func init() {
+	docs.SwaggerInfo.BasePath = "/api/v1"
 }
 
 func NewServer(log *logan.Entry, db data.MasterQ, cache cache.CacheQ, listener net.Listener, jwtConfig JWT) *Server {
